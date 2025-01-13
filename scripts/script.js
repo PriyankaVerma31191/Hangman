@@ -1,73 +1,79 @@
-const wordDisplay = document.querySelector(".word-display");
-const guessesText = document.querySelector(".guesses-text b");
-const keyboardDiv = document.querySelector(".keyboard");
-const hangmanImage = document.querySelector(".hangman-box img");
-const gameModal = document.querySelector(".game-modal");
-const playAgainBtn = gameModal.querySelector("button");
+let selectedWord = "";
+let guessedLetters = [];
+let remainingGuesses = 10;
+let gameOver = false; // Track the state of the game
 
-// Initializing game variables
-let currentWord, correctLetters, wrongGuessCount;
-const maxGuesses = 11;
+const wordDisplay = document.getElementById("word-display");
+const alphabetButtons = document.getElementById("alphabet-buttons");
+const hangmanImage = document.getElementById("hangman-img");
+const message = document.getElementById("message");
+const finalImage = document.getElementById("final-image");
+const playAgainButton = document.getElementById("play-again");
 
-const resetGame = () => {
-    // Ressetting game variables and UI elements
-    correctLetters = [];
-    wrongGuessCount = 0;
-    hangmanImage.src = "images/h-0.jpg";
-    guessesText.innerText = `${wrongGuessCount} / ${maxGuesses}`;
-    wordDisplay.innerHTML = currentWord.split("").map(() => `<li class="letter"></li>`).join("");
-    keyboardDiv.querySelectorAll("button").forEach(btn => btn.disabled = false);
-    gameModal.classList.remove("show");
+function startGame() {
+  selectedWord = wordList[Math.floor(Math.random() * wordList.length)];
+  guessedLetters = [];
+  remainingGuesses = 10;
+  gameOver = false; // Reset game state
+  updateWordDisplay();
+  createAlphabetButtons();
+  message.textContent = "";
+  finalImage.innerHTML = "";
+  hangmanImage.src = `images/h-0.jpg`;
+  playAgainButton.style.display = "none";
 }
 
-const getRandomWord = () => {
-    // Selecting a random word and hint from the wordList
-    const  word = wordList[Math.floor(Math.random() * wordList.length)];
-    currentWord = word; // Making currentWord as random word
-;
-    resetGame();
+function updateWordDisplay() {
+  const display = selectedWord
+    .split("")
+    .map((letter) => (guessedLetters.includes(letter.toUpperCase()) ? letter : "_"))
+    .join(" ");
+  wordDisplay.textContent = display;
 }
 
-const gameOver = (isVictory) => {
-    // After game complete.. showing modal with relevant details
-    const modalText = isVictory ? `You found the word:` : 'The correct word was:';
-    gameModal.querySelector("img").src = `images/${isVictory ? 'victory' : 'lost'}.gif`;
-    gameModal.querySelector("h4").innerText = isVictory ? 'Congrats!' : 'Game Over!';
-    gameModal.querySelector("p").innerHTML = `${modalText} <b>${currentWord}</b>`;
-    gameModal.classList.add("show");
-}
-
-const initGame = (button, clickedLetter) => {
-    // Checking if clickedLetter is exist on the currentWord
-    if(currentWord.includes(clickedLetter)) {
-        // Showing all correct letters on the word display
-        [...currentWord].forEach((letter, index) => {
-            if(letter === clickedLetter) {
-                correctLetters.push(letter);
-                wordDisplay.querySelectorAll("li")[index].innerText = letter;
-                wordDisplay.querySelectorAll("li")[index].classList.add("guessed");
-            }
-        });
-    } else {
-        // If clicked letter doesn't exist then update the wrongGuessCount and hangman image
-        wrongGuessCount++;
-        hangmanImage.src = `images/h-${wrongGuessCount}.jpg`;
-    }
-    button.disabled = true; // Disabling the clicked button so user can't click again
-    guessesText.innerText = `${wrongGuessCount} / ${maxGuesses}`;
-
-    // Calling gameOver function if any of these condition meets
-    if(wrongGuessCount === maxGuesses) return gameOver(false);
-    if(correctLetters.length === currentWord.length) return gameOver(true);
-}
-
-// Creating keyboard buttons and adding event listeners
-for (let i = 97; i <= 122; i++) {
+function createAlphabetButtons() {
+  alphabetButtons.innerHTML = "";
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((letter) => {
     const button = document.createElement("button");
-    button.innerText = String.fromCharCode(i);
-    keyboardDiv.appendChild(button);
-    button.addEventListener("click", (e) => initGame(e.target, String.fromCharCode(i)));
+    button.textContent = letter;
+    button.disabled = guessedLetters.includes(letter) || gameOver; // Disable buttons if game is over
+    button.addEventListener("click", () => handleGuess(letter));
+    alphabetButtons.appendChild(button);
+  });
 }
 
-getRandomWord();
-playAgainBtn.addEventListener("click", getRandomWord);
+function handleGuess(letter) {
+  if (gameOver) return; // Prevent guesses if the game is over
+
+  guessedLetters.push(letter);
+  if (selectedWord.toUpperCase().includes(letter)) {
+    updateWordDisplay();
+    if (!wordDisplay.textContent.includes("_")) {
+      message.textContent = "You Win!";
+      finalImage.innerHTML = `<img src="images/victory.gif" alt="Victory">`;
+      endGame();
+    }
+  } else {
+    remainingGuesses--;
+    hangmanImage.src = `images/h-${10 - remainingGuesses}.jpg`;
+    if (remainingGuesses === 0) {
+      message.textContent = `You Lose! The word was: ${selectedWord}`;
+      finalImage.innerHTML = `<img src="images/lost.gif" alt="Lost">`;
+      endGame();
+    }
+  }
+  createAlphabetButtons();
+}
+
+function endGame() {
+  gameOver = true; // Set game state to over
+  playAgainButton.style.display = "block";
+  const buttons = alphabetButtons.querySelectorAll("button");
+  buttons.forEach((button) => {
+    button.disabled = true; // Disable all buttons
+  });
+}
+
+playAgainButton.addEventListener("click", startGame);
+
+startGame();
